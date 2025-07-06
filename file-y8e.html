@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Physics Collision Demo - DeepSeek R1-0528</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background: #000;
+        }
+        
+        #canvas-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        /* Control Panel */
+        #control-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid #444;
+            border-radius: 10px;
+            padding: 20px;
+            color: white;
+            min-width: 280px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        
+        .slider {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: #555;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff6600;
+            cursor: pointer;
+        }
+        
+        .slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ff6600;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .control-button {
+            padding: 10px;
+            background: #ff6600;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        
+        .control-button:hover {
+            background: #ff8833;
+        }
+        
+        .control-button:active {
+            transform: scale(0.95);
+        }
+        
+        .control-button.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        /* Performance Metrics */
+        #performance-metrics {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            color: white;
+            font-size: 14px;
+            font-family: monospace;
+        }
+        
+        .metric-line {
+            margin-bottom: 5px;
+            color: #0ff;
+        }
+        
+        /* Educational Text */
+        #educational-text {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            max-width: 400px;
+            background: rgba(30, 30, 30, 0.9);
+            border: 1px solid #444;
+            border-radius: 5px;
+            padding: 15px;
+            color: white;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        
+        .bilingual-text {
+            margin-bottom: 10px;
+        }
+        
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            #control-panel {
+                bottom: 10px;
+                right: 10px;
+                min-width: 250px;
+                padding: 15px;
+            }
+            
+            #performance-metrics {
+                top: 10px;
+                right: 10px;
+                padding: 10px;
+                font-size: 12px;
+            }
+            
+            #educational-text {
+                display: none;
+            }
+            
+            .control-button {
+                font-size: 12px;
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <!-- Control Panel -->
+    <div id="control-panel">
+        <div class="control-group">
+            <div class="control-label">
+                <span>Speed/速度</span>
+                <span id="speed-value">7.0</span>
+            </div>
+            <input type="range" class="slider" id="speed-slider" min="0" max="10" step="0.1" value="7">
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">
+                <span>Gravity/重力</span>
+                <span id="gravity-value">7.84</span>
+            </div>
+            <input type="range" class="slider" id="gravity-slider" min="0" max="10" step="0.01" value="7.84">
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">
+                <span>Time Scale/时间尺度</span>
+                <span id="timescale-value">1.0</span>
+            </div>
+            <input type="range" class="slider" id="timescale-slider" min="0" max="2" step="0.05" value="1">
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">
+                <span>Friction/摩擦力</span>
+                <span id="friction-value">0.4</span>
+            </div>
+            <input type="range" class="slider" id="friction-slider" min="0" max="1" step="0.05" value="0.4">
+        </div>
+        
+        <div class="control-group">
+            <div class="control-label">
+                <span>Elasticity/弹性</span>
+                <span id="elasticity-value">0.0</span>
+            </div>
+            <input type="range" class="slider" id="elasticity-slider" min="0" max="1" step="0.05" value="0">
+        </div>
+        
+        <div class="button-group">
+            <button class="control-button" id="start-btn">Start/启动</button>
+            <button class="control-button" id="pause-btn">Pause/暂停</button>
+            <button class="control-button" id="reset-btn">Reset/重置</button>
+            <button class="control-button" id="slowmo-btn">Slow Motion/慢动作</button>
+            <button class="control-button" id="camera1-btn">Camera 1/相机1</button>
+            <button class="control-button" id="camera2-btn">Camera 2/相机2</button>
+        </div>
+    </div>
+    
+    <!-- Performance Metrics -->
+    <div id="performance-metrics">
+        <div class="metric-line">FPS: <span id="fps">0</span></div>
+        <div class="metric-line">Physics: <span id="physics-fps">120</span> FPS</div>
+        <div class="metric-line">Vertices: <span id="vertices">0</span></div>
+        <div class="metric-line">Fragments: <span id="fragments">0</span></div>
+    </div>
+    
+    <!-- Educational Text -->
+    <div id="educational-text">
+        <div class="bilingual-text">
+            <strong>Experiment Objective:</strong> Study the physical characteristics of a sphere impacting a wall, observe fracture and debris effects, analyze parameter influences, and optimize physics engine performance.
+        </div>
+        <div class="bilingual-text">
+            <strong>实验目标:</strong> 研究球体冲击墙体的物理特性, 观察墙体破裂和碎片飞散效果, 分析速度、重力、摩擦力和弹性的影响, 优化物理引擎表现。
+        </div>
+    </div>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        // Global variables
+        let scene, camera, renderer;
+        let sphere, wall, ground;
+        let wallFragments = [];
+        let sphereVelocity = new THREE.Vector3();
+        let isRunning = false;
+        let isPaused = false;
+        let hasCollided = false;
+        let clock = new THREE.Clock();
+        let fpsArray = [];
+        let lastTime = performance.now();
+        
+        // Physics parameters
+        let params = {
+            speed: 7.0,
+            gravity: 7.84,
+            timeScale: 1.0,
+            friction: 0.4,
+            elasticity: 0.0
+        };
+        
+        // Camera positions
+        const cameraPositions = {
+            camera1: { position: new THREE.Vector3(0, 5, 15), lookAt: new THREE.Vector3(0, 0, 0) },
+            camera2: { position: new THREE.Vector3(15, 5, 0), lookAt: new THREE.Vector3(0, 0, 0) }
+        };
+        
+        // Initialize scene
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
+            scene.fog = new THREE.Fog(0x000000, 10, 50);
+            
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.copy(cameraPositions.camera1.position);
+            camera.lookAt(cameraPositions.camera1.lookAt);
+            
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+            
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+            
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(-5, 10, 5);
+            directionalLight.castShadow = true;
+            directionalLight.shadow.camera.left = -10;
+            directionalLight.shadow.camera.right = 10;
+            directionalLight.shadow.camera.top = 10;
+            directionalLight.shadow.camera.bottom = -10;
+            directionalLight.shadow.camera.near = 0.1;
+            directionalLight.shadow.camera.far = 50;
+            directionalLight.shadow.mapSize.width = 2048;
+            directionalLight.shadow.mapSize.height = 2048;
+            scene.add(directionalLight);
+            
+            // Create objects
+            createGround();
+            createSphere();
+            createWall();
+            
+            // Event listeners
+            setupEventListeners();
+            
+            // Start animation loop
+            animate();
+        }
+        
+        // Create ground
+        function createGround() {
+            const groundGeometry = new THREE.PlaneGeometry(30, 30);
+            const groundMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xffffff,
+                specular: 0x111111,
+                shininess: 10
+            });
+            ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -2;
+            ground.receiveShadow = true;
+            scene.add(ground);
+        }
+        
+        // Create sphere
+        function createSphere() {
+            const sphereGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+            const sphereMaterial = new THREE.MeshPhongMaterial({ 
+                color: 0xff6600,
+                specular: 0xffffff,
+                shininess: 100,
+                emissive: 0xff3300,
+                emissiveIntensity: 0.1
+            });
+            sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+            sphere.position.set(-6, -0.5, 0);
+            sphere.castShadow = true;
+            sphere.receiveShadow = true;
+            scene.add(sphere);
+        }
+        
+        // Create wall
+        function createWall() {
+            // Remove existing wall and fragments
+            if (wall) {
+                scene.remove(wall);
+            }
+            wallFragments.forEach(fragment => scene.remove(fragment));
+            wallFragments = [];
+            
+            // Wall geometry with subdivisions for better fracture
+            const wallGeometry = new THREE.BoxGeometry(0.5, 6, 8, 2, 8, 8);
+            
+            // Create texture for wall
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            
+            // Wood texture pattern
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add wood grain
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            for (let i = 0; i < 20; i++) {
+                ctx.beginPath();
+                ctx.moveTo(0, i * 25);
+                ctx.lineTo(canvas.width, i * 25 + Math.random() * 10);
+                ctx.stroke();
+            }
+            
+            const wallTexture = new THREE.CanvasTexture(canvas);
+            wallTexture.wrapS = THREE.RepeatWrapping;
+            wallTexture.wrapT = THREE.RepeatWrapping;
+            
+            const wallMaterial = new THREE.MeshPhongMaterial({ 
+                map: wallTexture,
+                color: 0xffffff,
+                specular: 0x222222,
+                shininess: 20
+            });
+            
+            wall = new THREE.Mesh(wallGeometry, wallMaterial);
+            wall.position.set(0, 1, 0);
+            wall.castShadow = true;
+            wall.receiveShadow = true;
+            scene.add(wall);
+        }
+        
+        // Create wall fragments
+        function createWallFragments(impactPoint) {
+            // Remove intact wall
+            scene.remove(wall);
+            
+            const fragmentCount = 30;
+            const holeRadius = 2;
+            
+            // Get wall vertices
+            const wallVertices = wall.geometry.attributes.position.array;
+            const wallMatrix = wall.matrixWorld.clone();
+            
+            // Create fragments
+            for (let i = 0; i < fragmentCount; i++) {
+                const size = Math.random() * 0.5 + 0.2;
+                const fragmentGeometry = new THREE.BoxGeometry(size, size, 0.2);
+                
+                // Use wall material for fragments
+                const fragmentMaterial = wall.material.clone();
+                const fragment = new THREE.Mesh(fragmentGeometry, fragmentMaterial);
+                
+                // Position around impact point
+                const angle = Math.random() * Math.PI * 2;
+                const distance = Math.random() * holeRadius + 0.5;
+                
+                fragment.position.copy(impactPoint);
+                fragment.position.x += Math.cos(angle) * distance;
+                fragment.position.y += Math.sin(angle) * distance;
+                fragment.position.z += (Math.random() - 0.5) * 0.5;
+                
+                // Random rotation
+                fragment.rotation.x = Math.random() * Math.PI;
+                fragment.rotation.y = Math.random() * Math.PI;
+                fragment.rotation.z = Math.random() * Math.PI;
+                
+                // Fragment physics
+                fragment.velocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 5 + sphereVelocity.x * 0.3,
+                    Math.random() * 3,
+                    (Math.random() - 0.5) * 5
+                );
+                fragment.angularVelocity = new THREE.Vector3(
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10,
+                    (Math.random() - 0.5) * 10
+                );
+                
+                fragment.castShadow = true;
+                fragment.receiveShadow = true;
+                
+                wallFragments.push(fragment);
+                scene.add(fragment);
+            }
+            
+            // Create hole edges (remaining wall parts)
+            createHoleEdges(impactPoint, holeRadius);
+        }
+        
+        // Create hole edges
+        function createHoleEdges(impactPoint, holeRadius) {
+            // Create 4 wall pieces around the hole
+            const pieces = [
+                { pos: [0, 3.5, 0], size: [0.5, 1, 8] }, // Top piece
+                { pos: [0, -1.5, 0], size: [0.5, 2, 8] }, // Bottom piece
+                { pos: [0, 1, 3.5], size: [0.5, 6, 1] }, // Right piece
+                { pos: [0, 1, -3.5], size: [0.5, 6, 1] } // Left piece
+            ];
+            
+            pieces.forEach(piece => {
+                const geometry = new THREE.BoxGeometry(...piece.size);
+                const mesh = new THREE.Mesh(geometry, wall.material.clone());
+                mesh.position.set(...piece.pos);
+                mesh.castShadow = true;
+                mesh.receiveShadow = true;
+                scene.add(mesh);
+                wallFragments.push(mesh);
+            });
+        }
+        
+        // Physics update
+        function updatePhysics(deltaTime) {
+            if (!isRunning || isPaused) return;
+            
+            const dt = deltaTime * params.timeScale;
+            
+            // Update sphere
+            if (!hasCollided) {
+                // Apply velocity
+                sphere.position.add(sphereVelocity.clone().multiplyScalar(dt));
+                
+                // Check collision with wall
+                if (sphere.position.x >= -0.25 && sphere.position.x <= 0.25) {
+                    handleCollision();
+                }
+            } else {
+                // After collision physics
+                sphereVelocity.y -= params.gravity * dt;
+                sphere.position.add(sphereVelocity.clone().multiplyScalar(dt));
+                
+                // Ground collision
+                if (sphere.position.y <= -0.5) {
+                    sphere.position.y = -0.5;
+                    sphereVelocity.y *= -params.elasticity;
+                    sphereVelocity.x *= (1 - params.friction);
+                    sphereVelocity.z *= (1 - params.friction);
+                    
+                    // Stop if velocity is very low
+                    if (Math.abs(sphereVelocity.x) < 0.1 && Math.abs(sphereVelocity.y) < 0.1) {
+                        sphereVelocity.set(0, 0, 0);
+                    }
+                }
+            }
+            
+            // Update fragments
+            wallFragments.forEach(fragment => {
+                if (fragment.velocity) {
+                    fragment.velocity.y -= params.gravity * dt;
+                    fragment.position.add(fragment.velocity.clone().multiplyScalar(dt));
+                    
+                    // Rotation
+                    if (fragment.angularVelocity) {
+                        fragment.rotation.x += fragment.angularVelocity.x * dt;
+                        fragment.rotation.y += fragment.angularVelocity.y * dt;
+                        fragment.rotation.z += fragment.angularVelocity.z * dt;
+                    }
+                    
+                    // Ground collision
+                    if (fragment.position.y <= -1.8) {
+                        fragment.position.y = -1.8;
+                        fragment.velocity.y *= -0.3;
+                        fragment.velocity.x *= 0.8;
+                        fragment.velocity.z *= 0.8;
+                        
+                        if (fragment.angularVelocity) {
+                            fragment.angularVelocity.multiplyScalar(0.9);
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Handle collision
+        function handleCollision() {
+            hasCollided = true;
+            
+            // Calculate impact point
+            const impactPoint = new THREE.Vector3(0, sphere.position.y, sphere.position.z);
+            
+            // Create fragments
+            createWallFragments(impactPoint);
+            
+            // Reduce sphere velocity based on elasticity
+            sphereVelocity.x *= (1 - params.elasticity);
+            
+            // Add impact glow effect
+            addImpactGlow();
+        }
+        
+        // Add impact glow
+        function addImpactGlow() {
+            sphere.material.emissiveIntensity = 0.5;
+            setTimeout(() => {
+                if (sphere.material) {
+                    sphere.material.emissiveIntensity = 0.1;
+                }
+            }, 200);
+        }
+        
+        // Setup event listeners
+        function setupEventListeners() {
+            // Sliders
+            document.getElementById('speed-slider').addEventListener('input', (e) => {
+                params.speed = parseFloat(e.target.value);
+                document.getElementById('speed-value').textContent = params.speed.toFixed(1);
+            });
+            
+            document.getElementById('gravity-slider').addEventListener('input', (e) => {
+                params.gravity = parseFloat(e.target.value);
+                document.getElementById('gravity-value').textContent = params.gravity.toFixed(2);
+            });
+            
+            document.getElementById('timescale-slider').addEventListener('input', (e) => {
+                params.timeScale = parseFloat(e.target.value);
+                document.getElementById('timescale-value').textContent = params.timeScale.toFixed(1);
+            });
+            
+            document.getElementById('friction-slider').addEventListener('input', (e) => {
+                params.friction = parseFloat(e.target.value);
+                document.getElementById('friction-value').textContent = params.friction.toFixed(2);
+            });
+            
+            document.getElementById('elasticity-slider').addEventListener('input', (e) => {
+                params.elasticity = parseFloat(e.target.value);
+                document.getElementById('elasticity-value').textContent = params.elasticity.toFixed(2);
+            });
+            
+            // Buttons
+            document.getElementById('start-btn').addEventListener('click', startSimulation);
+            document.getElementById('pause-btn').addEventListener('click', pauseSimulation);
+            document.getElementById('reset-btn').addEventListener('click', resetSimulation);
+            document.getElementById('slowmo-btn').addEventListener('click', toggleSlowMotion);
+            document.getElementById('camera1-btn').addEventListener('click', () => switchCamera('camera1'));
+            document.getElementById('camera2-btn').addEventListener('click', () => switchCamera('camera2'));
+            
+            // Window resize
+            window.addEventListener('resize', onWindowResize);
+        }
+        
+        // Start simulation
+        function startSimulation() {
+            if (!isRunning) {
+                isRunning = true;
+                isPaused = false;
+                sphereVelocity.set(params.speed, 0, 0);
+            }
+        }
+        
+        // Pause simulation
+        function pauseSimulation() {
+            isPaused = !isPaused;
+        }
+        
+        // Reset simulation
+        function resetSimulation() {
+            isRunning = false;
+            isPaused = false;
+            hasCollided = false;
+            
+            // Reset sphere
+            sphere.position.set(-6, -0.5, 0);
+            sphereVelocity.set(0, 0, 0);
+            
+            // Recreate wall
+            createWall();
+            
+            // Reset time scale
+            params.timeScale = 1.0;
+            document.getElementById('timescale-slider').value = 1.0;
+            document.getElementById('timescale-value').textContent = '1.0';
+        }
+        
+        // Toggle slow motion
+        function toggleSlowMotion() {
+            if (params.timeScale === 1.0) {
+                params.timeScale = 0.25;
+            } else {
+                params.timeScale = 1.0;
+            }
+            document.getElementById('timescale-slider').value = params.timeScale;
+            document.getElementById('timescale-value').textContent = params.timeScale.toFixed(2);
+        }
+        
+        // Switch camera
+        function switchCamera(cameraName) {
+            const pos = cameraPositions[cameraName];
+            camera.position.copy(pos.position);
+            camera.lookAt(pos.lookAt);
+        }
+        
+        // Window resize handler
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // Update performance metrics
+        function updatePerformanceMetrics() {
+            const currentTime = performance.now();
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            // Calculate FPS
+            const fps = Math.round(1000 / deltaTime);
+            fpsArray.push(fps);
+            if (fpsArray.length > 60) fpsArray.shift();
+            
+            const avgFps = Math.round(fpsArray.reduce((a, b) => a + b, 0) / fpsArray.length);
+            
+            // Update display
+            document.getElementById('fps').textContent = avgFps;
+            document.getElementById('vertices').textContent = renderer.info.render.vertices;
+            document.getElementById('fragments').textContent = wallFragments.length;
+        }
+        
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            const deltaTime = clock.getDelta();
+            
+            // Update physics
+            updatePhysics(deltaTime);
+            
+            // Update performance metrics
+            updatePerformanceMetrics();
+            
+            // Render scene
+            renderer.render(scene, camera);
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
